@@ -33,7 +33,6 @@ import org.elasticsearch.common.unit.ByteSizeValue
 import org.elasticsearch.rest.RestStatus
 import org.elasticsearch.transport.RemoteTransportException
 import java.time.Instant
-import kotlin.Exception
 
 /**
  * Attempt to transition to the next state
@@ -70,6 +69,9 @@ class AttemptTransitionStep(
             val indexCreationDateInstant = Instant.ofEpochMilli(indexCreationDate)
             if (indexCreationDate == -1L) {
                 logger.warn("$indexName had an indexCreationDate=-1L, cannot use for comparison")
+            }
+            else {
+                logger.info("$indexName indexCreationDate=$indexCreationDateInstant")
             }
             val stepStartTime = getStepStartTime()
             var numDocs: Long? = null

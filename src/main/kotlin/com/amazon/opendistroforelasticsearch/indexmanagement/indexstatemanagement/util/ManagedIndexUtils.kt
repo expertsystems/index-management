@@ -17,15 +17,10 @@
 package com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.util
 
 import com.amazon.opendistroforelasticsearch.indexmanagement.IndexManagementPlugin.Companion.INDEX_MANAGEMENT_INDEX
+import com.amazon.opendistroforelasticsearch.indexmanagement.elasticapi.optionalTimeField
 import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.ManagedIndexCoordinator
 import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.action.Action
-import com.amazon.opendistroforelasticsearch.indexmanagement.elasticapi.optionalTimeField
-import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.ChangePolicy
-import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.ManagedIndexConfig
-import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.Transition
-import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.ManagedIndexMetaData
-import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.Policy
-import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.State
+import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.*
 import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.action.ActionConfig
 import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.action.ActionRetry
 import com.amazon.opendistroforelasticsearch.indexmanagement.indexstatemanagement.model.action.RolloverActionConfig
@@ -192,17 +187,28 @@ fun Transition.evaluateConditions(
     transitionStartTime: Instant
 ): Boolean {
     // If there are no conditions, treat as always true
-    if (this.conditions == null) return true
+    val logger = LogManager.getLogger(javaClass)
+    if (this.conditions == null) {
+        logger.info("No conditions")
+        return true
+    }
 
     if (this.conditions.docCount != null && numDocs != null) {
+        logger.info("docCount condition: " + this.conditions.docCount)
         return this.conditions.docCount <= numDocs
     }
 
     if (this.conditions.indexAge != null) {
+        logger.info("indexAge condition: " + this.conditions.indexAge)
         val indexCreationDateMilli = indexCreationDate.toEpochMilli()
+        logger.info("indexAge condition: indexCreationDateMilli $indexCreationDateMilli")
         if (indexCreationDateMilli == -1L) return false // transitions cannot currently be ORd like rollover, so we must return here
         val elapsedTime = Instant.now().toEpochMilli() - indexCreationDateMilli
+        logger.info("indexAge condition: elapsedTime $elapsedTime vs indexAge " + this.conditions.indexAge.millis)
         return this.conditions.indexAge.millis <= elapsedTime
+    }
+    else {
+        logger.info("No indexAge condition")
     }
 
     if (this.conditions.size != null && indexSize != null) {
